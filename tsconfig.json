@@ -17,6 +17,7 @@
     "strictFunctionTypes": true,
     "noImplicitThis": true,
     "noUnusedLocals": true,
+    "skipLibCheck": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
@@ -25,8 +26,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
-    "skipLibCheck": true,
+    "baseUrl": "."
   },
   "exclude": [
     "node_modules"
