@@ -1,3 +1,4 @@
+import { COOKIE_NAME } from './../constants';
 import {
   Resolver,
   Mutation,
@@ -149,4 +150,25 @@ export class UserResolver {
       user,
     };
   }
+
+  
+  
+  @Mutation(() => Boolean)
+  logout(@Ctx() { req, res }: MyContext) {
+    return new Promise((resolve) =>
+      req.session.destroy((err: any) => {
+        console.log(err)
+        res.clearCookie(COOKIE_NAME);
+        if (err) {
+          console.log(err);
+          resolve(false);
+          return;
+        }
+
+        resolve(true);
+      })
+    );
+  }
+
+
 }
