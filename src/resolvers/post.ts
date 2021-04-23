@@ -1,33 +1,58 @@
-import { isAuth } from './../middleware/isAuth';
-import { MyContext } from './../types';
-
-import { Resolver, Query, Arg, Mutation, InputType, Field, Ctx, UseMiddleware, Int } from "type-graphql";
+import {
+  Resolver,
+  Query,
+  Arg,
+  Mutation,
+  InputType,
+  Field,
+  Ctx,
+  UseMiddleware,
+  Int,
+  FieldResolver,
+  Root,
+  ObjectType,
+} from "type-graphql";
 import { Post } from "../entities/Post";
-import { getConnection } from 'typeorm';
+import { MyContext } from "../types";
+import { isAuth } from "../middleware/isAuth";
+import { getConnection } from "typeorm";
 
 @InputType()
 class PostInput {
   @Field()
-  title: string
+  title: string;
   @Field()
-  text: string
+  text: string;
 }
 
-@Resolver()
+@ObjectType()
+class PaginatedPosts {
+  @Field(() => [Post])
+  posts: Post[];
+  @Field()
+  hasMore: boolean;
+}
+
+@Resolver(Post)
 export class PostResolver {
-  @Query(() => [Post])
+  @FieldResolver(() => String)
+  textSnippet(@Root() post: Post) {
+    return post.text.slice(0, 50);
+  }
+
+  @Query(() => PaginatedPosts)
   async posts(
     @Arg("limit", () => Int) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string | null
-  ): Promise<Post[]> {
-    //TO DO, check if this is not actually paginating to the most recent ones, it should go backwards, since we already show the first in the beginning
-
+  ): Promise<PaginatedPosts> {
+    // 20 -> 21
     const realLimit = Math.min(50, limit);
+    const reaLimitPlusOne = realLimit + 1;
     const qb = getConnection()
       .getRepository(Post)
       .createQueryBuilder("p")
       .orderBy('"createdAt"', "DESC")
-      .take(realLimit);
+      .take(reaLimitPlusOne);
 
     if (cursor) {
       qb.where('"createdAt" < :cursor', {
@@ -35,7 +60,12 @@ export class PostResolver {
       });
     }
 
-    return qb.getMany();
+    const posts = await qb.getMany();
+
+    return {
+      posts: posts.slice(0, realLimit),
+      hasMore: posts.length === reaLimitPlusOne,
+    };
   }
 
   @Query(() => Post, { nullable: true })
@@ -51,7 +81,7 @@ export class PostResolver {
   ): Promise<Post> {
     return Post.create({
       ...input,
-      creatorId: req.session.userId
+      creatorId: req.session.userId,
     }).save();
   }
 
@@ -72,17 +102,7 @@ export class PostResolver {
 
   @Mutation(() => Boolean)
   async deletePost(@Arg("id") id: number): Promise<boolean> {
-    const post = await Post.findOne(id);
-    if (post) {
-      try {
-        await Post.delete(id);
-        return true;
-      } catch (err) {
-        console.error(err)
-        return false
-      }
-    }
-    return false
+    await Post.delete(id);
+    return true;
   }
 }
-
